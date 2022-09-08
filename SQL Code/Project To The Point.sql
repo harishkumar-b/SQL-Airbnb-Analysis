@@ -1,23 +1,23 @@
-Create Database Project_PLA;
+---- Create Database Project_PLA;
 
-Use Project_PLA;
+-- Use Project_PLA;
 
-Select * from host_austin_df;
-Select * from listing_austin_df;
-Select * from df_austin_availability;
-Select * from review_austin_df;
+-- Select * from host_austin_df;
+-- Select * from listing_austin_df;
+-- Select * from df_austin_availability;
+-- Select * from review_austin_df;
 
-Select * from host_dallas_df;
-Select * from listing_dallas_df;
-Select * from df_dallas_availability;
-Select * from review_dallas_df;
+-- Select * from host_dallas_df;
+-- Select * from listing_dallas_df;
+-- Select * from df_dallas_availability;
+-- Select * from review_dallas_df;
 
 
 ---a
---(i) Types of Property with pricing buckets based on avg_price:
+--TYPES OF PROPERTY WITH PRICING BUCKETS BASES ON AVERAGE PRICE:
 Select * from PT_Budget;
 
---(ii) Acceptance rate metric and bucketizing acceptance
+--ACCEPTANCE RATE ACROSS PROPERTY TYPES:
 --Select * from PT_Budget;
 Select * from Avg_ACR;
 
@@ -33,7 +33,7 @@ join Avg_ACR as A
 ON B.property_type=A.property_type)AR;
 
 
---(iii) Metrics on rating
+--RATING BUCKETS ON PROPERTY TYPES:
 Select *, Case when Avg_of_rating = 5 then 'Extraodinary'
 when Avg_of_rating > 4.5 then 'Excellent'
 when Avg_of_rating > 4 then 'Good'
@@ -48,7 +48,7 @@ UNION
 Select Property_Type, Avg(review_scores_rating) as Avg_ from listing_dallas_df group by Property_Type)Av_R
 Group by Property_Type)Avg_Rate;
 
---(iv) Metrics on avg no of booking
+--BOOKING VOLUMES CATEGORIZATION ON PROPERTY TYPE:
 Select *, Case when Number_of_bookings> 100000 then 'Most Bookings'
 when Number_of_bookings < 10000 then 'Least Bookings'
 else 'Moderate Bookings'
@@ -70,21 +70,15 @@ GROUP BY Property_Type)Bookings;
 
 
 ---b
-----Price Trends accross Property_Types
---Select Property_Type, Min(Min_P) as Min_Price, Max(Max_P) as Max_Price, Avg(Avg_P) as Avg_Price from
---(Select Property_Type, min(price) as Min_P, max(price) as Max_P, avg(price) as Avg_P from listing_dallas_df  group by property_type 
---UNION
---Select Property_Type, min(price) as Min_P, max(price) as Max_P, avg(price) as Avg_Price from listing_austin_df  group by property_type)PT 
---Group by Property_Type;
 
---Price Trends accross Listing Categories
+--PRICE TRENDS ACROSS LISTING CATEGORIES:
 Select Room_Type, Min(Min_P) as Min_Price, Max(Max_P) as Max_Price, Avg(Avg_P) as Avg_Price from
 (Select Room_Type, min(price) as Min_P, max(price) as Max_P, avg(price) as Avg_P from listing_dallas_df  group by room_type 
 UNION
 Select Room_Type, min(price) as Min_P, max(price) as Max_P, avg(price) as Avg_P from listing_austin_df  group by room_type)PT 
 Group by Room_Type;
 
---Acceptance trends accross Listing Categories
+--ACCEPTANCE TRENDS ACROSS LISTING CATEGORIES:
 Select Room_Type, Avg(Avg_) as Avg_AR from 
 (Select listD.Room_Type, AVG(hostD.host_acceptance_rate) as Avg_ from listing_dallas_df as listD
 join host_dallas_df as hostD
@@ -104,6 +98,7 @@ join PT_Ratings as R
 on b.property_type=r.property_type;
 
 ---d
+--REVIEW ANALYSIS THROUGH COMMENT KEYWORDS:
 Select Room_Type, Sum(Postive_comments) as Postive_comments, Sum(Negative_Comments) as Negative_Comments
 from
 (Select * from d_comments 
@@ -117,7 +112,7 @@ Group by Property_Type, Month_Year
 Order by Property_Type;
 
 ---f
----PEAK
+--PEAK
 Select room_type, Month , Year, Sum(Av) as Peak_Counts from 
 (
 Select room_type, datepart(month,date) as Month , year(date) as Year, count(available) as Av from list_availA 
@@ -140,3 +135,20 @@ where available=1 group by room_type, datepart(month,date),year(date)
 )Avail
 group by room_type, Month , Year
 order by room_type;
+
+
+---g
+--BEST PERFORMING CATEGORY:
+
+Select  room_type, Sum(Peak_Counts) as No_of_Booking from
+(Select room_type, Month , Year, Sum(Av) as Peak_Counts from 
+(
+Select room_type, datepart(month,date) as Month , year(date) as Year, count(available) as Av from list_availA 
+where available=0 group by room_type, datepart(month,date),year(date)
+UNION
+Select room_type, datepart(month,date) as month, year(date) as Year, count(available) Av from list_availD 
+where available=0 group by room_type, datepart(month,date),year(date)
+)Avail
+group by room_type, Month , Year)Cat_Analysis
+group by room_type
+order by Sum(Peak_Counts) desc;
